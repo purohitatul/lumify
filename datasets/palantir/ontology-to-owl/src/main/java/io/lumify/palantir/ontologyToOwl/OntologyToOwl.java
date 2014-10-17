@@ -343,8 +343,13 @@ public class OntologyToOwl {
     private void runOnLinkTypeConfig(Document inXml) {
         String uri = getXmlString(inXml, "/link_type_config/uri");
         String label = getXmlString(inXml, "/link_type_config/displayName");
-        String edgeIconUri = getXmlString(inXml, "/link_type_config/edgeIconUri");
-        String infoIconUri = getXmlString(inXml, "/link_type_config/infoIconUri");
+
+        // TODO edgeIconUri ???
+        // TODO infoIconUri ???
+        // TODO objectToObject ???
+        // TODO objectToProperty ???
+        // TODO systemProperty ???
+        // TODO typeGroups ???
 
         Element objectPropertyElement = exportDoc.createElementNS(ns.getNamespaceURI("owl"), "owl:ObjectProperty");
         objectPropertyElement.setAttributeNS(ns.getNamespaceURI("rdf"), "rdf:about", uriToIri(uri));
@@ -355,18 +360,7 @@ public class OntologyToOwl {
         labelElement.appendChild(exportDoc.createTextNode(label));
         objectPropertyElement.appendChild(labelElement);
 
-        ObjectProperty objectProperty = new ObjectProperty(objectPropertyElement);
-
-        if (edgeIconUri != null && edgeIconUri.length() > 0) {
-            objectProperty.setEdgeIconUri(edgeIconUri);
-        }
-
-        if (infoIconUri != null && infoIconUri.length() > 0) {
-            objectProperty.setInfoIconUri(infoIconUri);
-            addIconMapping(infoIconUri, objectProperty);
-        }
-
-        objectProperties.put(uri, objectProperty);
+        objectProperties.put(uri, new ObjectProperty(objectPropertyElement));
     }
 
     private void addIconMapping(String iconUri, OwlElement owlElement) {

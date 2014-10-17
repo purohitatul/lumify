@@ -9,8 +9,6 @@ public class ObjectProperty implements OwlElement {
     private final Element objectPropertyElement;
     private final Set<String> domainUris = new HashSet<String>();
     private final Set<String> rangeUris = new HashSet<String>();
-    private String edgeIconUri;
-    private String infoIconUri;
 
     public ObjectProperty(Element objectPropertyElement) {
         this.objectPropertyElement = objectPropertyElement;
@@ -34,21 +32,5 @@ public class ObjectProperty implements OwlElement {
 
     public Set<String> getRangeUris() {
         return rangeUris;
-    }
-
-    public void setEdgeIconUri(String edgeIconUri) {
-        this.edgeIconUri = edgeIconUri;
-    }
-
-    public String getEdgeIconUri() {
-        return edgeIconUri;
-    }
-
-    public void setInfoIconUri(String infoIconUri) {
-        this.infoIconUri = infoIconUri;
-    }
-
-    public String getInfoIconUri() {
-        return infoIconUri;
     }
 }
