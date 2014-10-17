@@ -32,6 +32,7 @@ import java.util.Map;
 
 public class OntologyToOwl {
     private static final LumifyLogger LOGGER = LumifyLoggerFactory.getLogger(OntologyToOwl.class);
+    public static final String INVERSE_SUFFIX = "_inverse";
     private String baseIri;
     private final File outFile;
     private Element exportRootElement;
@@ -290,6 +291,13 @@ public class OntologyToOwl {
         if (objectProperty != null) {
             objectProperty.addDomain(uriToIri(uri2));
             objectProperty.addRange(uriToIri(uri1));
+
+            ObjectProperty objectPropertyInverse = objectProperties.get(linkUri + INVERSE_SUFFIX);
+            if (objectPropertyInverse != null) {
+                objectPropertyInverse.addDomain(uriToIri(uri2));
+                objectPropertyInverse.addRange(uriToIri(uri1));
+            }
+
             return;
         }
 
@@ -343,6 +351,7 @@ public class OntologyToOwl {
     private void runOnLinkTypeConfig(Document inXml) {
         String uri = getXmlString(inXml, "/link_type_config/uri");
         String label = getXmlString(inXml, "/link_type_config/displayName");
+        List<Element> asymmetricElements = getXmlElements(inXml, "/link_type_config/asymmetric");
 
         // TODO edgeIconUri ???
         // TODO infoIconUri ???
@@ -354,6 +363,42 @@ public class OntologyToOwl {
         Element objectPropertyElement = exportDoc.createElementNS(ns.getNamespaceURI("owl"), "owl:ObjectProperty");
         objectPropertyElement.setAttributeNS(ns.getNamespaceURI("rdf"), "rdf:about", uriToIri(uri));
         exportRootElement.appendChild(objectPropertyElement);
+
+        if (asymmetricElements != null && asymmetricElements.size() > 0) {
+            if (asymmetricElements.size() > 1) {
+                throw new LumifyException("To many 'asymmetric' elements found. Expected 0 or 1, found " + asymmetricElements.size());
+            }
+            String parentToChildLabel = getXmlString(asymmetricElements.get(0), "parentToChild/displayName");
+            String childToParentLabel = getXmlString(asymmetricElements.get(0), "childToParent/displayName");
+
+            if (parentToChildLabel != null && parentToChildLabel.length() > 0) {
+                label = parentToChildLabel;
+            }
+
+            String inverseLabel = label;
+            if (childToParentLabel != null && childToParentLabel.length() > 0) {
+                inverseLabel = childToParentLabel;
+            }
+
+            Element inverseObjectPropertyElement = exportDoc.createElementNS(ns.getNamespaceURI("owl"), "owl:ObjectProperty");
+            inverseObjectPropertyElement.setAttributeNS(ns.getNamespaceURI("rdf"), "rdf:about", uriToIri(uri + INVERSE_SUFFIX));
+            exportRootElement.appendChild(inverseObjectPropertyElement);
+
+            Element labelElement = exportDoc.createElementNS(ns.getNamespaceURI("rdfs"), "rdfs:label");
+            labelElement.setAttributeNS(ns.getNamespaceURI("xml"), "xml:lang", "en");
+            labelElement.appendChild(exportDoc.createTextNode(inverseLabel));
+            inverseObjectPropertyElement.appendChild(labelElement);
+
+            Element inverseOfElement = exportDoc.createElementNS(ns.getNamespaceURI("owl"), "owl:inverseOf");
+            inverseOfElement.setAttributeNS(ns.getNamespaceURI("rdf"), "rdf:resource", uriToIri(uri + INVERSE_SUFFIX));
+            objectPropertyElement.appendChild(inverseOfElement);
+
+            inverseOfElement = exportDoc.createElementNS(ns.getNamespaceURI("owl"), "owl:inverseOf");
+            inverseOfElement.setAttributeNS(ns.getNamespaceURI("rdf"), "rdf:resource", uriToIri(uri));
+            inverseObjectPropertyElement.appendChild(inverseOfElement);
+
+            objectProperties.put(uri + INVERSE_SUFFIX, new ObjectProperty(inverseObjectPropertyElement));
+        }
 
         Element labelElement = exportDoc.createElementNS(ns.getNamespaceURI("rdfs"), "rdfs:label");
         labelElement.setAttributeNS(ns.getNamespaceURI("xml"), "xml:lang", "en");
@@ -398,7 +443,7 @@ public class OntologyToOwl {
         labelElement.appendChild(exportDoc.createTextNode(label));
         classElement.appendChild(labelElement);
 
-        if (parentTypeUri != null && parentTypeUri.length() > 0) {
+        if (parentTypeUri != null && parentTypeUri.length() > 0 && !parentTypeUri.equals(uri)) {
             Element subClassOfElement = exportDoc.createElementNS(ns.getNamespaceURI("rdfs"), "rdfs:subClassOf");
             subClassOfElement.setAttributeNS(ns.getNamespaceURI("rdf"), "rdf:resource", uriToIri(parentTypeUri));
             classElement.appendChild(subClassOfElement);
