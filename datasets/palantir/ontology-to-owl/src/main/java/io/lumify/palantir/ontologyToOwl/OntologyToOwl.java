@@ -42,6 +42,7 @@ public class OntologyToOwl {
     private DocumentBuilder docBuilder;
     private XPath xPath;
     private NamespaceContext ns;
+    private TitleFormulaMaker titleFormulaMaker;
     private Map<String, ObjectProperty> objectProperties = new HashMap<String, ObjectProperty>();
     private Map<String, DataTypeProperty> dataTypeProperties = new HashMap<String, DataTypeProperty>();
     private Map<String, OwlClass> owlClasses = new HashMap<String, OwlClass>();
@@ -50,6 +51,7 @@ public class OntologyToOwl {
     public OntologyToOwl(String baseIri, File outFile) {
         this.baseIri = baseIri;
         this.outFile = outFile;
+        titleFormulaMaker = new TitleFormulaMaker(baseIri);
     }
 
     public static void main(String[] args) throws Exception {
@@ -381,6 +383,17 @@ public class OntologyToOwl {
         String label = getXmlString(inXml, "/pt_object_type_config/displayName");
         String parentTypeUri = getXmlString(inXml, "/pt_object_type_config/parentType");
         String infoIconUri = getXmlString(inXml, "/pt_object_type_config/display/infoIconUri");
+        String comment = getXmlString(inXml, "/pt_object_type_config/description");
+        List<Element> titleArgs = getXmlElements(inXml, "/pt_object_type_config/title/args/arg");
+
+        // TODO baseType ???
+        // TODO commitable ???
+        // TODO intrinsic ???
+        // TODO guessers ???
+        // TODO typeGroups ???
+        // TODO display/defaultNodeDisplayTypeUri ???
+        // TODO display/edgeIconUri ???
+        // TODO labelPropertyUri ???
 
         Element classElement = exportDoc.createElementNS(ns.getNamespaceURI("owl"), "owl:Class");
         classElement.setAttributeNS(ns.getNamespaceURI("rdf"), "rdf:about", uriToIri(uri));
@@ -395,6 +408,21 @@ public class OntologyToOwl {
             Element subClassOfElement = exportDoc.createElementNS(ns.getNamespaceURI("rdfs"), "rdfs:subClassOf");
             subClassOfElement.setAttributeNS(ns.getNamespaceURI("rdf"), "rdf:resource", uriToIri(parentTypeUri));
             classElement.appendChild(subClassOfElement);
+        }
+
+        if (comment != null && comment.length() > 0) {
+            Element commentElement = exportDoc.createElementNS(ns.getNamespaceURI("rdfs"), "rdfs:comment");
+            commentElement.appendChild(exportDoc.createTextNode(comment));
+            classElement.appendChild(commentElement);
+        }
+
+        if (titleArgs != null && titleArgs.size() > 0) {
+            String titleFormula = titleFormulaMaker.create(titleArgs);
+            if (titleFormula.trim().length() > 0) {
+                Element titleFormulaElement = exportDoc.createElementNS(ns.getNamespaceURI("lumify"), "lumify:titleFormula");
+                titleFormulaElement.appendChild(exportDoc.createCDATASection("\n" + indent(titleFormula, "      ") + "\n    "));
+                classElement.appendChild(titleFormulaElement);
+            }
         }
 
         OwlClass owlClass = new OwlClass(classElement);
@@ -434,6 +462,10 @@ public class OntologyToOwl {
     }
 
     private String uriToIri(String uri) {
+        return uriToIri(baseIri, uri);
+    }
+
+    public static String uriToIri(String baseIri, String uri) {
         return baseIri + '#' + uri;
     }
 }
